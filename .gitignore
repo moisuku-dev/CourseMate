@@ -1,0 +1,33 @@
+# 기본 Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json
+.pnpm-store/
+
+# Expo / React Native
+.expo/
+.expo-shared/
+dist/
+web-build/
+android/
+ios/
+
+# Babel
+.babel-cache/
+.expo-cache/
+
+# Metro bundler
+.metro/
+
+# IDE & 에디터 설정
+.vscode/
+.idea/
+.DS_Store
+
+# 빌드 아웃풋 (웹)
+build/
+dist/
+vite.config.ts.timestamp-*
