@@ -3,15 +3,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 require('dotenv').config();
 
-// DB 연결 정보 (app.js와 동일한 설정 사용)
-const pool = mariadb.createPool({
-  host: process.env.DB_HOST,
-  port: process.env.DB_PORT,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  connectionLimit: 5
-});
+const pool = require('../database');
 
 // JWT 비밀키 (실무에서는 .env에 넣어야 함)
 const JWT_SECRET = 'my_super_secret_key_1234';

@@ -17,6 +17,7 @@ const port = process.env.PORT || 3000;
 // 미들웨어 설정
 app.use(cors()); // 프론트엔드와 통신 허용
 app.use(express.json()); // JSON 요청 본문 해석
+app.use('/images', express.static('images')); // 이미지 파일 제공
 
 // 1. MariaDB 연결 풀(Pool) 생성
 const pool = mariadb.createPool({

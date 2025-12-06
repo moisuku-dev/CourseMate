@@ -6,8 +6,6 @@ const recommendationController = require('../controllers/recommendationControlle
 // 경로: /api/recommendations
 router.get('/', recommendationController.getRecommendations);
 
-// 2. 다른 관광 코스 선택 (재추천)
-// 경로: /api/recommendations/retry
-router.get('/retry', recommendationController.getRetryRecommendations);
+
 
 module.exports = router;

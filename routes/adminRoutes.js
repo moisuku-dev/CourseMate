@@ -23,7 +23,6 @@ router.delete('/reviews/:reviewId', adminController.deleteReviewAdmin);
 // 6. 문의 답변
 router.post('/inquiries/:id/answer', adminController.answerInquiry);
 
-// 7. AI 모델 관리
-router.post('/ai/train', adminController.triggerAITrain);
+
 
 module.exports = router;

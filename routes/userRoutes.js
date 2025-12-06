@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
 
+// 0. 전체 태그 목록 조회
+router.get('/tags', userController.getAllTags);
+
 // 1. 내 취향 태그 조회
 router.get('/me/preferences', userController.getMyPreferences);
 

@@ -1,27 +1,40 @@
 const mariadb = require('mariadb');
-const bcrypt = require('bcryptjs'); // 비밀번호 확인/변경용
+const bcrypt = require('bcryptjs');
 require('dotenv').config();
 
-const pool = mariadb.createPool({
-  host: process.env.DB_HOST,
-  port: process.env.DB_PORT,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  connectionLimit: 5
-});
+const pool = require('../database');
 
-// Helper: DB에서 태그 ID 찾기 (없으면 무시)
+// Helper: DB에서 태그 ID 찾기
 async function getTagIdByName(conn, tagName) {
   const rows = await conn.query("SELECT TAG_ID FROM TAG WHERE TAG_NAME = ?", [tagName]);
   return rows.length > 0 ? rows[0].TAG_ID : null;
 }
 
-// 1. 내 취향 태그 조회 (GET /api/users/me/preferences) 
+// ✨ [NEW] 0. 전체 태그 목록 조회 (프론트엔드 선택 화면용)
+exports.getAllTags = async (req, res) => {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    // TAG 테이블에 있는 30개 태그 반환
+    const rows = await conn.query("SELECT TAG_ID, TAG_NAME FROM TAG ORDER BY TAG_ID");
+    
+    res.status(200).json({
+      result_code: 200,
+      result_msg: "전체 태그 목록 조회 성공",
+      tags: rows.map(r => r.TAG_NAME) // ["#맛집", "#가성비", ...]
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ result_code: 500, result_msg: "서버 오류" });
+  } finally {
+    if (conn) conn.end();
+  }
+};
+
+// 1. 내 취향 태그 조회 (GET /api/users/me/preferences)
 exports.getMyPreferences = async (req, res) => {
   let conn;
   try {
-    // 테스트용: 토큰 미들웨어가 없으므로 query에서 userId를 받음
     const userId = req.query.userId || req.body.userId; 
     conn = await pool.getConnection();
 
@@ -33,13 +46,10 @@ exports.getMyPreferences = async (req, res) => {
     `;
     const rows = await conn.query(query, [userId]);
     
-    // 태그 이름만 배열로 추출
-    const tags = rows.map(row => row.TAG_NAME);
-
     res.status(200).json({
       result_code: 200,
-      result_msg: tags.length > 0 ? "취향 태그 조회 성공" : "설정된 취향 태그가 없습니다.",
-      tags: tags
+      result_msg: "취향 태그 조회 성공",
+      tags: rows.map(row => row.TAG_NAME)
     });
   } catch (err) {
     console.error(err);
@@ -49,30 +59,38 @@ exports.getMyPreferences = async (req, res) => {
   }
 };
 
-// 2. 내 취향 태그 설정/수정 (POST /api/users/me/preferences) 
+// 2. 내 취향 태그 설정/수정 (POST /api/users/me/preferences)
 exports.setMyPreferences = async (req, res) => {
   let conn;
   try {
     const { userId, tags } = req.body; // tags: ["#가성비", "#조용한"]
     conn = await pool.getConnection();
 
-    // 기존 취향 삭제 (초기화 후 다시 설정하는 방식)
+    // 1) 기존 취향 삭제
     await conn.query("DELETE FROM USER_PREFERENCE WHERE USER_ID = ?", [userId]);
 
-    // 새 취향 저장
-    for (const tagName of tags) {
-      // 1) 태그 테이블에 존재하는지 확인 (없으면 TAG 테이블에 먼저 넣어야 할 수도 있지만, 설계상 있는 태그만 선택한다고 가정)
-      // 여기서는 편의상 TAG 테이블에 있는 것만 연결
-      const tagId = await getTagIdByName(conn, tagName);
-      
-      if (tagId) {
-        await conn.query("INSERT INTO USER_PREFERENCE (USER_ID, TAG_ID) VALUES (?, ?)", [userId, tagId]);
-      }
+    // 2) 새 취향 저장
+  if (tags.length > 0) {
+    // 태그 이름들로 ID를 한 번에 다 가져옴
+    const tagRows = await conn.query(
+      "SELECT TAG_ID FROM TAG WHERE TAG_NAME IN (?)", 
+      [tags] // tags 배열을 넣으면 알아서 매칭됨 (라이브러리 버전에 따라 다를 수 있으니 주의)
+      // 만약 에러나면: "WHERE TAG_NAME IN ('" + tags.join("','") + "')" 형태로 문자열 생성 필요
+    );
+  
+    if (tagRows.length > 0) {
+      const values = tagRows.map(row => [userId, row.TAG_ID]);
+     // Bulk Insert 쿼리
+      await conn.batch(
+        "INSERT INTO USER_PREFERENCE (USER_ID, TAG_ID) VALUES (?, ?)",
+        values
+      );
     }
+  }
 
     res.status(200).json({
       result_code: 200,
-      result_msg: "취향 태그 설정/수정 성공. 새로운 추천을 받을 수 있습니다."
+      result_msg: "취향 태그 설정 성공"
     });
   } catch (err) {
     console.error(err);
