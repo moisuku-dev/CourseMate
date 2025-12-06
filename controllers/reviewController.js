@@ -54,35 +54,38 @@ exports.createReview = async (req, res) => {
   let conn;
   try {
     const { id } = req.params; // spotId
-    const { userId, rating, content } = req.body; // 실제로는 토큰에서 userId를 꺼내야 함 (지금은 테스트용으로 body에서 받음)
-
-    const reviewId = 'REV' + Date.now(); // ID 생성
+    const userId = req.body.userId;
+    const rating = parseFloat(req.body.rating);
+    const content = req.body.content;
+    const reviewId = 'REV' + Date.now();
 
     conn = await pool.getConnection();
     
-    // (1) 리뷰 우선 저장 (감성은 아직 NULL)
+    // (1) 리뷰 저장 (REVIEW 테이블은 그대로)
     await conn.query(
       "INSERT INTO REVIEW (REVIEW_ID, USER_ID, SPOT_ID, RATING, CONTENT) VALUES (?, ?, ?, ?, ?)",
       [reviewId, userId, id, rating, content]
     );
 
-    // (2) AI 분석 요청 (Mocking)
-    const aiResult = await mockAIAnalysis(content);
+    // (2) ✨ 사진 저장 로직 수정 (PHOTO_ID, SPOT_ID, IMG_URL 3개만 저장)
+    if (req.file) { 
+      const photoId = 'P' + Date.now();
+      const imgUrl = `/uploads/${req.file.filename}`;
 
-    // (3) AI 분석 결과(감성) 업데이트
-    await conn.query(
-      "UPDATE REVIEW SET SENTIMENT = ? WHERE REVIEW_ID = ?",
-      [aiResult.sentiment, reviewId]
-    );
+      await conn.query(
+        "INSERT INTO PHOTO (PHOTO_ID, SPOT_ID, IMG_URL) VALUES (?, ?, ?)",
+        [photoId, id, imgUrl]
+      );
+    }
 
-    // (4) 관광지 평균 별점 업데이트 (선택 사항이지만 구현하면 좋음)
-    // 간단하게 구현 생략 가능, 필요하면 추후 추가
+    // (3) AI 분석 요청 (Mock)
+    // const aiResult = await mockAIAnalysis(content); 
+    // ...
 
     res.status(200).json({
       result_code: 200,
-      result_msg: "리뷰 등록 및 AI 분석 완료",
-      reviewId: reviewId,
-      sentiment: aiResult.sentiment // 결과 확인용
+      result_msg: "리뷰 및 사진 등록 완료",
+      reviewId: reviewId
     });
 
   } catch (err) {
@@ -164,7 +167,8 @@ exports.getPlacePhotos = async (req, res) => {
     const { id } = req.params; // spotId
     conn = await pool.getConnection();
 
-    const query = "SELECT PHOTO_ID, IMG_URL, REG_DATE FROM PHOTO WHERE SPOT_ID = ? ORDER BY REG_DATE DESC";
+    // REG_DATE가 없으므로 정렬 기준을 PHOTO_ID(생성시간 포함됨)나 무작위로 변경
+    const query = "SELECT PHOTO_ID, IMG_URL FROM PHOTO WHERE SPOT_ID = ?";
     const rows = await conn.query(query, [id]);
 
     res.status(200).json({
@@ -172,8 +176,8 @@ exports.getPlacePhotos = async (req, res) => {
       result_msg: "사진 목록 조회 성공",
       photos: rows.map(row => ({
         photoId: row.PHOTO_ID,
-        url: row.IMG_URL,
-        regDate: row.REG_DATE
+        url: row.IMG_URL
+        // regDate는 이제 없습니다.
       }))
     });
 

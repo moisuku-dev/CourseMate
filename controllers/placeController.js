@@ -1,7 +1,6 @@
 const mariadb = require('mariadb');
 require('dotenv').config();
 
-// database.js로 분리하셨다면 require('../database')로 쓰시고, 아니면 아래 유지하세요.
 const pool = mariadb.createPool({
   host: process.env.DB_HOST,
   port: process.env.DB_PORT,
@@ -11,47 +10,37 @@ const pool = mariadb.createPool({
   connectionLimit: 5
 });
 
-// 1. 관광지 목록 조회 (썸네일 포함)
+// 1. 관광지 목록 조회 및 검색 (지역, 카테고리, 키워드 필터)
 exports.getPlaces = async (req, res) => {
   let conn;
   try {
     conn = await pool.getConnection();
     
-    // 쿼리 파라미터: category, keyword, region
     const { category, keyword, region } = req.query;
 
-    // ✨ [핵심 수정] 서브쿼리를 사용하여 대표 사진(thumbnail) 1장만 가져옵니다.
-    // (SELECT IMG_URL FROM PHOTO WHERE SPOT_ID = t.SPOT_ID LIMIT 1)
-    let sql = `
-      SELECT 
-        t.*, 
-        (SELECT IMG_URL FROM PHOTO p WHERE p.SPOT_ID = t.SPOT_ID ORDER BY p.PHOTO_ID ASC LIMIT 1) as thumbnail 
-      FROM TOUR_SPOT t 
-      WHERE 1=1
-    `;
-    
+    let sql = "SELECT SPOT_ID, NAME, ADDRESS, CATEGORY, AVG_RATING FROM TOUR_SPOT WHERE 1=1";
     let params = [];
 
-    // 1) 지역 필터
+    // 1) 지역 필터 (주소 검색)
     if (region) {
-      sql += " AND t.ADDRESS LIKE ?";
+      sql += " AND ADDRESS LIKE ?";
       params.push(`%${region}%`);
     }
 
     // 2) 카테고리 필터
     if (category) {
-      sql += " AND t.CATEGORY = ?";
+      sql += " AND CATEGORY = ?";
       params.push(category);
     }
 
     // 3) 검색어 필터
     if (keyword) {
-      sql += " AND t.NAME LIKE ?";
+      sql += " AND NAME LIKE ?";
       params.push(`%${keyword}%`);
     }
 
-    // 정렬 (최신순 또는 ID순)
-    sql += " ORDER BY t.SPOT_ID ASC";
+    // 정렬: 평점 높은 순, 혹은 이름 순
+    sql += " ORDER BY AVG_RATING DESC LIMIT 100"; 
 
     const rows = await conn.query(sql, params);
 
@@ -59,7 +48,7 @@ exports.getPlaces = async (req, res) => {
       result_code: 200,
       result_msg: "관광지 목록 조회 성공",
       totalCount: rows.length,
-      places: rows // 각 객체 안에 thumbnail 필드가 포함됨
+      places: rows
     });
 
   } catch (err) {
@@ -70,15 +59,18 @@ exports.getPlaces = async (req, res) => {
   }
 };
 
-// 2. 관광지 상세 정보 조회 (사진 목록 포함)
+// 2. 관광지 상세 정보 조회 (사진 + 태그 포함) ✨ 핵심 수정
 exports.getPlaceDetail = async (req, res) => {
   let conn;
   try {
     conn = await pool.getConnection();
     const { id } = req.params; // spotId
 
-    // 1) 관광지 기본 정보 조회
-    const placeRows = await conn.query("SELECT * FROM TOUR_SPOT WHERE SPOT_ID = ?", [id]);
+    // (1) 기본 정보 조회
+    const placeRows = await conn.query(
+      "SELECT SPOT_ID, NAME, ADDRESS, CATEGORY, AVG_RATING FROM TOUR_SPOT WHERE SPOT_ID = ?", 
+      [id]
+    );
 
     if (placeRows.length === 0) {
       return res.status(404).json({ result_code: 404, result_msg: "존재하지 않는 관광지입니다." });
@@ -86,21 +78,24 @@ exports.getPlaceDetail = async (req, res) => {
 
     const place = placeRows[0];
 
-    // 2) ✨ [핵심 수정] 해당 관광지의 모든 사진 조회
+    // (2) 사진 목록 조회 (PHOTO 테이블)
     const photoRows = await conn.query(
-      "SELECT PHOTO_ID, IMG_URL FROM PHOTO WHERE SPOT_ID = ? ORDER BY PHOTO_ID ASC", 
+      "SELECT IMG_URL FROM PHOTO WHERE SPOT_ID = ?", 
       [id]
     );
+    place.photos = photoRows.map(p => p.IMG_URL); // 배열로 변환
 
-    // 3) 데이터를 합쳐서 응답
-    // photos 배열에 이미지 URL만 담아서 줄지, 객체로 줄지 선택 가능 (여기선 객체 유지)
+    // (3) 대표 태그 조회 (점수 높은 순 Top 5)
+    const tagRows = await conn.query(
+      "SELECT TAG_NAME FROM SPOT_TAG_SCORES WHERE SPOT_ID = ? ORDER BY SCORE DESC LIMIT 5",
+      [id]
+    );
+    place.topTags = tagRows.map(t => '#' + t.TAG_NAME); // 예: ["#뷰맛집", "#야경명소"]
+
     res.status(200).json({
       result_code: 200,
       result_msg: "관광지 상세 정보 조회 성공",
-      place: {
-        ...place,
-        photos: photoRows // [{ PHOTO_ID: 1, IMG_URL: '...' }, ...]
-      }
+      place: place
     });
 
   } catch (err) {
