@@ -1,434 +1,273 @@
 // src/pages/AdminPlacesPage.jsx
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import AdminSidebar from "../components/AdminSidebar.jsx";
-import {
-  fetchPlaces,
-  createPlace,
-  updatePlace,
-  deletePlace,
-  updatePlaceVisibility,
-} from "../api/adminPlaces.js";
-
-const EMPTY_FORM = {
-  name: "",
-  category: "",
-  area: "",
-  address: "",
-};
+import { createAdminPlace, deleteAdminPlace } from "../api/adminPlaces.js";
 
 const AdminPlacesPage = () => {
-  const [keyword, setKeyword] = useState("");
-  const [places, setPlaces] = useState([]); // [{ id, name, category, area, address, rating, reviewCount, isVisible }]
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [form, setForm] = useState({
+    spotId: "",
+    name: "",
+    address: "",
+    category: "",
+    latitude: "",
+    longitude: "",
+  });
+  const [creating, setCreating] = useState(false);
+  const [deleteId, setDeleteId] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [message, setMessage] = useState("");
 
-  const [form, setForm] = useState(EMPTY_FORM);
-  const [editingId, setEditingId] = useState(null); // null이면 신규 등록
-
-  const loadPlaces = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const data = await fetchPlaces({ keyword });
-      setPlaces(Array.isArray(data) ? data : []);
-    } catch (e) {
-      console.error(e);
-      setError("관광지 목록을 불러오지 못했습니다.");
-      setPlaces([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadPlaces();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const handleSearch = (e) => {
-    e.preventDefault();
-    loadPlaces();
-  };
-
-  const handleChangeForm = (e) => {
+  const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const resetForm = () => {
-    setForm(EMPTY_FORM);
-    setEditingId(null);
-  };
-
-  const handleSubmitForm = async (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault();
-    if (!form.name || !form.category || !form.area || !form.address) {
-      alert("이름/카테고리/지역/주소를 모두 입력해주세요.");
+    setMessage("");
+    if (!form.spotId || !form.name) {
+      setMessage("관광지 ID와 이름은 필수입니다.");
       return;
     }
 
+    setCreating(true);
     try {
-      if (editingId == null) {
-        // 신규
-        await createPlace(form);
+      const payload = {
+        spotId: Number(form.spotId),
+        name: form.name,
+        address: form.address,
+        category: form.category,
+        latitude: form.latitude ? Number(form.latitude) : null,
+        longitude: form.longitude ? Number(form.longitude) : null,
+      };
+      const res = await createAdminPlace(payload);
+      if (res && res.result_code === 200) {
+        setMessage("관광지 등록에 성공했습니다.");
       } else {
-        // 수정
-        await updatePlace(editingId, form);
+        setMessage(res?.result_msg || "관광지 등록에 실패했습니다.");
       }
-      resetForm();
-      await loadPlaces();
     } catch (e) {
       console.error(e);
-      alert("관광지 저장에 실패했습니다.");
+      setMessage("관광지 등록 중 오류가 발생했습니다.");
+    } finally {
+      setCreating(false);
     }
   };
 
-  const handleEdit = (place) => {
-    setEditingId(place.id);
-    setForm({
-      name: place.name ?? "",
-      category: place.category ?? "",
-      area: place.area ?? "",
-      address: place.address ?? "",
-    });
-  };
-
-  const handleDelete = async (place) => {
-    if (!window.confirm(`'${place.name}' 관광지를 삭제할까요?`)) return;
-    try {
-      await deletePlace(place.id);
-      await loadPlaces();
-    } catch (e) {
-      console.error(e);
-      alert("삭제에 실패했습니다.");
-    }
-  };
-
-  const handleToggleVisibility = async (place) => {
-    const next = !place.isVisible;
-    if (
-      !window.confirm(
-        `'${place.name}' 관광지 노출 상태를 ${place.isVisible ? "비노출" : "노출"}로 변경할까요?`
-      )
-    ) {
+  const handleDelete = async (e) => {
+    e.preventDefault();
+    setMessage("");
+    if (!deleteId) {
+      setMessage("삭제할 관광지 ID를 입력해주세요.");
       return;
     }
+    if (!window.confirm("정말 이 관광지를 삭제하시겠습니까?")) return;
+    setDeleting(true);
     try {
-      await updatePlaceVisibility(place.id, next);
-      await loadPlaces();
+      const res = await deleteAdminPlace(deleteId);
+      if (res && res.result_code === 200) {
+        setMessage("관광지 삭제에 성공했습니다.");
+      } else {
+        setMessage(res?.result_msg || "관광지 삭제에 실패했습니다.");
+      }
     } catch (e) {
       console.error(e);
-      alert("노출 상태 변경에 실패했습니다.");
+      setMessage("관광지 삭제 중 오류가 발생했습니다.");
+    } finally {
+      setDeleting(false);
     }
   };
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
+    <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#020617" }}>
       <AdminSidebar />
-      <div style={{ flex: 1, padding: "24px" }}>
-        <h1 style={{ fontSize: "20px", marginBottom: "12px" }}>관광지 관리</h1>
+      <main style={{ flex: 1, padding: "24px 28px" }}>
+        <h1 style={{ fontSize: "22px", fontWeight: "700", color: "#f9fafb", marginBottom: "4px" }}>
+          관광지 관리
+        </h1>
+        <p style={{ fontSize: "13px", color: "#9ca3af", marginBottom: "16px" }}>
+          관광지 정보를 등록하거나 삭제할 수 있습니다.
+        </p>
 
-        {/* 검색 영역 */}
-        <form
-          onSubmit={handleSearch}
-          style={{ marginBottom: "12px", display: "flex", gap: "8px", flexWrap: "wrap" }}
-        >
-          <input
-            type="text"
-            placeholder="관광지명 / 지역 / 카테고리 검색"
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            style={{
-              flex: "0 0 260px",
-              padding: "6px 8px",
-              borderRadius: "6px",
-              border: "1px solid #444",
-              backgroundColor: "#000",
-              color: "#f5f5f5",
-              fontSize: "13px",
-            }}
-          />
-          <button
-            type="submit"
-            style={{
-              padding: "6px 12px",
-              borderRadius: "6px",
-              border: "1px solid #444",
-              backgroundColor: "#111",
-              fontSize: "13px",
-            }}
-          >
-            검색
-          </button>
-        </form>
-
-        {loading && <div style={{ fontSize: "13px" }}>불러오는 중...</div>}
-        {error && (
-          <div style={{ fontSize: "13px", color: "#ff6b6b", marginBottom: "8px" }}>
-            {error}
+        {message && (
+          <div style={{ marginBottom: "12px", fontSize: "13px", color: "#e5e7eb" }}>
+            {message}
           </div>
         )}
 
-        {/* 목록 */}
-        <div style={{ overflowX: "auto", marginBottom: "16px" }}>
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              fontSize: "13px",
-              minWidth: "760px",
-            }}
-          >
-            <thead>
-              <tr>
-                <th style={{ padding: "6px", borderBottom: "1px solid #444", textAlign: "left" }}>
-                  ID
-                </th>
-                <th style={{ padding: "6px", borderBottom: "1px solid #444", textAlign: "left" }}>
-                  이름
-                </th>
-                <th style={{ padding: "6px", borderBottom: "1px solid #444", textAlign: "left" }}>
-                  카테고리
-                </th>
-                <th style={{ padding: "6px", borderBottom: "1px solid #444", textAlign: "left" }}>
-                  지역
-                </th>
-                <th style={{ padding: "6px", borderBottom: "1px solid #444", textAlign: "left" }}>
-                  주소
-                </th>
-                <th style={{ padding: "6px", borderBottom: "1px solid #444", textAlign: "left" }}>
-                  평점
-                </th>
-                <th style={{ padding: "6px", borderBottom: "1px solid #444", textAlign: "left" }}>
-                  리뷰 수
-                </th>
-                <th style={{ padding: "6px", borderBottom: "1px solid #444", textAlign: "left" }}>
-                  노출
-                </th>
-                <th style={{ padding: "6px", borderBottom: "1px solid #444", textAlign: "left" }}>
-                  관리
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {places.map((p) => (
-                <tr key={p.id}>
-                  <td style={{ padding: "6px", borderBottom: "1px solid #333" }}>{p.id}</td>
-                  <td style={{ padding: "6px", borderBottom: "1px solid #333" }}>{p.name}</td>
-                  <td style={{ padding: "6px", borderBottom: "1px solid #333" }}>
-                    {p.category}
-                  </td>
-                  <td style={{ padding: "6px", borderBottom: "1px solid #333" }}>{p.area}</td>
-                  <td style={{ padding: "6px", borderBottom: "1px solid #333" }}>{p.address}</td>
-                  <td style={{ padding: "6px", borderBottom: "1px solid #333" }}>
-                    {p.rating ?? "-"}
-                  </td>
-                  <td style={{ padding: "6px", borderBottom: "1px solid #333" }}>
-                    {p.reviewCount ?? 0}
-                  </td>
-                  <td style={{ padding: "6px", borderBottom: "1px solid #333" }}>
-                    {p.isVisible ? "노출" : "비노출"}
-                  </td>
-                  <td style={{ padding: "6px", borderBottom: "1px solid #333" }}>
-                    <button
-                      type="button"
-                      onClick={() => handleEdit(p)}
-                      style={{
-                        padding: "4px 8px",
-                        borderRadius: "4px",
-                        border: "1px solid #444",
-                        backgroundColor: "#111",
-                        fontSize: "12px",
-                        marginRight: "4px",
-                      }}
-                    >
-                      수정
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleToggleVisibility(p)}
-                      style={{
-                        padding: "4px 8px",
-                        borderRadius: "4px",
-                        border: "1px solid #444",
-                        backgroundColor: "#111",
-                        fontSize: "12px",
-                        marginRight: "4px",
-                      }}
-                    >
-                      {p.isVisible ? "비노출" : "노출"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(p)}
-                      style={{
-                        padding: "4px 8px",
-                        borderRadius: "4px",
-                        border: "1px solid #703030",
-                        backgroundColor: "#2a0000",
-                        fontSize: "12px",
-                      }}
-                    >
-                      삭제
-                    </button>
-                  </td>
-                </tr>
-              ))}
-
-              {!loading && places.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={9}
-                    style={{
-                      padding: "8px",
-                      textAlign: "center",
-                      color: "#aaa",
-                      borderBottom: "1px solid #333",
-                    }}
-                  >
-                    등록된 관광지가 없습니다.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* 등록/수정 폼 */}
-        <section
+        <div
           style={{
-            borderRadius: "10px",
-            border: "1px solid #333",
-            padding: "12px",
-            backgroundColor: "#111",
-            maxWidth: "520px",
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 1.2fr) minmax(0, 0.9fr)",
+            gap: "20px",
           }}
         >
-          <h2 style={{ fontSize: "16px", marginTop: 0 }}>
-            {editingId == null ? "새 관광지 등록" : `관광지 수정 (ID: ${editingId})`}
-          </h2>
-          <form onSubmit={handleSubmitForm}>
-            <div style={{ marginBottom: "8px" }}>
-              <label style={{ fontSize: "13px" }}>
-                이름
-                <input
-                  type="text"
-                  name="name"
-                  value={form.name}
-                  onChange={handleChangeForm}
-                  style={{
-                    marginTop: "4px",
-                    width: "100%",
-                    padding: "6px 8px",
-                    borderRadius: "6px",
-                    border: "1px solid #444",
-                    backgroundColor: "#000",
-                    color: "#f5f5f5",
-                    fontSize: "13px",
-                  }}
-                />
-              </label>
-            </div>
-            <div style={{ marginBottom: "8px" }}>
-              <label style={{ fontSize: "13px" }}>
-                카테고리
-                <input
-                  type="text"
-                  name="category"
-                  value={form.category}
-                  onChange={handleChangeForm}
-                  style={{
-                    marginTop: "4px",
-                    width: "100%",
-                    padding: "6px 8px",
-                    borderRadius: "6px",
-                    border: "1px solid #444",
-                    backgroundColor: "#000",
-                    color: "#f5f5f5",
-                    fontSize: "13px",
-                  }}
-                />
-              </label>
-            </div>
-            <div style={{ marginBottom: "8px" }}>
-              <label style={{ fontSize: "13px" }}>
-                지역
-                <input
-                  type="text"
-                  name="area"
-                  value={form.area}
-                  onChange={handleChangeForm}
-                  style={{
-                    marginTop: "4px",
-                    width: "100%",
-                    padding: "6px 8px",
-                    borderRadius: "6px",
-                    border: "1px solid #444",
-                    backgroundColor: "#000",
-                    color: "#f5f5f5",
-                    fontSize: "13px",
-                  }}
-                />
-              </label>
-            </div>
-            <div style={{ marginBottom: "8px" }}>
-              <label style={{ fontSize: "13px" }}>
-                주소
-                <input
-                  type="text"
-                  name="address"
-                  value={form.address}
-                  onChange={handleChangeForm}
-                  style={{
-                    marginTop: "4px",
-                    width: "100%",
-                    padding: "6px 8px",
-                    borderRadius: "6px",
-                    border: "1px solid #444",
-                    backgroundColor: "#000",
-                    color: "#f5f5f5",
-                    fontSize: "13px",
-                  }}
-                />
-              </label>
-            </div>
+          <form
+            onSubmit={handleCreate}
+            style={{
+              backgroundColor: "#020617",
+              borderRadius: "12px",
+              padding: "16px",
+              border: "1px solid rgba(148,163,184,0.35)",
+              boxShadow: "0 8px 24px rgba(15,23,42,0.65)",
+            }}
+          >
+            <h2
+              style={{
+                fontSize: "16px",
+                fontWeight: "600",
+                color: "#f9fafb",
+                marginBottom: "12px",
+              }}
+            >
+              관광지 등록
+            </h2>
+            <Field
+              label="관광지 ID (SPOT_ID)"
+              name="spotId"
+              value={form.spotId}
+              onChange={handleChange}
+            />
+            <Field label="이름" name="name" value={form.name} onChange={handleChange} />
+            <Field
+              label="주소"
+              name="address"
+              value={form.address}
+              onChange={handleChange}
+            />
+            <Field
+              label="카테고리"
+              name="category"
+              value={form.category}
+              onChange={handleChange}
+            />
+            <Field
+              label="위도"
+              name="latitude"
+              value={form.latitude}
+              onChange={handleChange}
+            />
+            <Field
+              label="경도"
+              name="longitude"
+              value={form.longitude}
+              onChange={handleChange}
+            />
 
-            <div style={{ marginTop: "10px", display: "flex", gap: "8px" }}>
-              <button
-                type="submit"
+            <button
+              type="submit"
+              disabled={creating}
+              style={{
+                marginTop: "8px",
+                padding: "8px 12px",
+                borderRadius: "9999px",
+                border: "none",
+                backgroundColor: creating ? "#4b5563" : "#4f46e5",
+                color: "#e5e7eb",
+                fontSize: "14px",
+                fontWeight: "600",
+                cursor: creating ? "default" : "pointer",
+              }}
+            >
+              {creating ? "등록 중..." : "등록"}
+            </button>
+          </form>
+
+          <div>
+            <form
+              onSubmit={handleDelete}
+              style={{
+                backgroundColor: "#020617",
+                borderRadius: "12px",
+                padding: "16px",
+                border: "1px solid rgba(148,163,184,0.35)",
+                boxShadow: "0 8px 24px rgba(15,23,42,0.65)",
+                marginBottom: "16px",
+              }}
+            >
+              <h2
                 style={{
-                  padding: "6px 12px",
-                  borderRadius: "6px",
-                  border: "1px solid #444",
-                  backgroundColor: "#f5f5f5",
-                  color: "#000",
-                  fontSize: "13px",
+                  fontSize: "16px",
                   fontWeight: "600",
+                  color: "#f9fafb",
+                  marginBottom: "12px",
                 }}
               >
-                {editingId == null ? "등록" : "수정 저장"}
+                관광지 삭제
+              </h2>
+              <Field
+                label="삭제할 관광지 ID (SPOT_ID)"
+                name="deleteId"
+                value={deleteId}
+                onChange={(e) => setDeleteId(e.target.value)}
+              />
+              <button
+                type="submit"
+                disabled={deleting}
+                style={{
+                  marginTop: "8px",
+                  padding: "8px 12px",
+                  borderRadius: "9999px",
+                  border: "none",
+                  backgroundColor: deleting ? "#4b5563" : "#ef4444",
+                  color: "#e5e7eb",
+                  fontSize: "14px",
+                  fontWeight: "600",
+                  cursor: deleting ? "default" : "pointer",
+                }}
+              >
+                {deleting ? "삭제 중..." : "삭제"}
               </button>
-              {editingId != null && (
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  style={{
-                    padding: "6px 12px",
-                    borderRadius: "6px",
-                    border: "1px solid #444",
-                    backgroundColor: "#111",
-                    fontSize: "13px",
-                  }}
-                >
-                  새로 등록 모드로
-                </button>
-              )}
+            </form>
+
+            <div
+              style={{
+                backgroundColor: "#020617",
+                borderRadius: "12px",
+                padding: "16px",
+                border: "1px solid rgba(148,163,184,0.35)",
+                color: "#9ca3af",
+                fontSize: "13px",
+              }}
+            >
+              <strong>관광지 목록</strong>
+              <p style={{ marginTop: "6px" }}>
+                {/* TODO: 관리자용 관광지 목록 조회 API 연동 필요 */}
+                현재 관리자용 관광지 목록 조회 API 정보가 없어, 이 영역은 UI만 준비된
+                상태입니다. 백엔드 스펙 확정 후 목록/검색/페이징 기능을 연동해야 합니다.
+              </p>
             </div>
-          </form>
-        </section>
-      </div>
+          </div>
+        </div>
+      </main>
     </div>
   );
 };
+
+const Field = ({ label, name, value, onChange }) => (
+  <div style={{ marginBottom: "8px" }}>
+    <label
+      htmlFor={name}
+      style={{ display: "block", fontSize: "13px", color: "#e5e7eb", marginBottom: "4px" }}
+    >
+      {label}
+    </label>
+    <input
+      id={name}
+      name={name}
+      value={value}
+      onChange={onChange}
+      style={{
+        width: "100%",
+        padding: "8px 10px",
+        borderRadius: "8px",
+        border: "1px solid rgba(148,163,184,0.6)",
+        backgroundColor: "#020617",
+        color: "#e5e7eb",
+        fontSize: "13px",
+      }}
+    />
+  </div>
+);
 
 export default AdminPlacesPage;

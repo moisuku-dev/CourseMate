@@ -146,7 +146,6 @@ const AdminCommunityPage = () => {
       <div style={{ flex: 1, padding: "24px" }}>
         <h1 style={{ fontSize: "20px", marginBottom: "12px" }}>커뮤니티 관리</h1>
 
-        {/* 공지사항 관리 */}
         <section style={{ marginBottom: "24px" }}>
           <h2 style={{ fontSize: "16px", marginBottom: "8px" }}>공지사항 관리</h2>
 
@@ -257,7 +256,6 @@ const AdminCommunityPage = () => {
             </table>
           </div>
 
-          {/* 공지사항 등록/수정 폼 */}
           <div
             style={{
               borderRadius: "10px",
@@ -361,7 +359,6 @@ const AdminCommunityPage = () => {
           </div>
         </section>
 
-        {/* 이용자 의견 관리 */}
         <section>
           <h2 style={{ fontSize: "16px", marginBottom: "8px" }}>이용자 의견 관리</h2>
 
@@ -503,3 +500,4 @@ const AdminCommunityPage = () => {
 };
 
 export default AdminCommunityPage;
+

@@ -2,46 +2,49 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 
-const AdminSidebar = () => {
-  const linkStyle = ({ isActive }) => ({
-    display: "block",
-    padding: "8px 12px",
-    fontSize: "14px",
-    fontWeight: isActive ? "700" : "400",
-    textDecoration: "none",
-    borderRadius: "6px",
-    backgroundColor: isActive ? "#222" : "transparent",
-  });
+const linkStyle = ({ isActive }) => ({
+  display: "block",
+  padding: "8px 12px",
+  fontSize: "14px",
+  fontWeight: isActive ? "700" : "400",
+  textDecoration: "none",
+  borderRadius: "6px",
+  backgroundColor: isActive ? "#222" : "transparent",
+});
 
+const AdminSidebar = () => {
   return (
     <aside
       style={{
         width: "220px",
-        borderRight: "1px solid #333",
-        padding: "16px 8px",
-        boxSizing: "border-box",
-        backgroundColor: "#111",
+        backgroundColor: "#000",
+        color: "#f9fafb",
+        padding: "16px",
+        minHeight: "100vh",
       }}
     >
-      <h2 style={{ fontSize: "16px", fontWeight: "700", marginBottom: "16px" }}>
-        코스메이트 관리자
-      </h2>
+      <div style={{ marginBottom: "16px" }}>
+        <div style={{ fontSize: "18px", fontWeight: "800" }}>COSMATE Admin</div>
+        <div style={{ fontSize: "12px", color: "#9ca3af", marginTop: "2px" }}>
+          관리자 콘솔
+        </div>
+      </div>
 
       <section style={{ marginBottom: "16px" }}>
         <div style={{ fontWeight: "600", marginBottom: "4px", fontSize: "13px" }}>
-          대시보드
+          메인
         </div>
         <NavLink to="/admin/dashboard" style={linkStyle}>
-          일일 통계
+          대시보드
         </NavLink>
       </section>
 
       <section style={{ marginBottom: "16px" }}>
         <div style={{ fontWeight: "600", marginBottom: "4px", fontSize: "13px" }}>
-          회원 관리
+          사용자 관리
         </div>
         <NavLink to="/admin/users" style={linkStyle}>
-          회원 목록
+          회원 관리
         </NavLink>
       </section>
 
@@ -53,16 +56,13 @@ const AdminSidebar = () => {
           관광지 관리
         </NavLink>
         <NavLink to="/admin/reviews" style={linkStyle}>
-          리뷰/태그 관리
+          리뷰 관리
         </NavLink>
-      </section>
-
-      <section style={{ marginBottom: "16px" }}>
-        <div style={{ fontWeight: "600", marginBottom: "4px", fontSize: "13px" }}>
-          커뮤니티
-        </div>
         <NavLink to="/admin/community" style={linkStyle}>
-          공지/의견 관리
+          커뮤니티 관리
+        </NavLink>
+        <NavLink to="/admin/inquiries" style={linkStyle}>
+          문의 관리
         </NavLink>
       </section>
 

@@ -1,13 +1,10 @@
 // src/pages/AdminDashboardPage.jsx
 import React, { useEffect, useState } from "react";
 import AdminSidebar from "../components/AdminSidebar.jsx";
-import { useAuth } from "../context/AuthContext.jsx";
 import { fetchDashboardStats } from "../api/adminDashboard.js";
 
 const AdminDashboardPage = () => {
-  const { admin, logout } = useAuth();
-
-  const [stats, setStats] = useState(null); // { todayUsers, todayReviews, totalUsers, totalReviews }
+  const [stats, setStats] = useState(null); // { totalUsers, totalReviews, totalSpots }
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -15,12 +12,15 @@ const AdminDashboardPage = () => {
     setLoading(true);
     setError("");
     try {
-      const data = await fetchDashboardStats();
-      setStats(data);
+      const res = await fetchDashboardStats();
+      if (res && res.result_code === 200) {
+        setStats(res.stats || null);
+      } else {
+        setError(res?.result_msg || "통계 조회에 실패했습니다.");
+      }
     } catch (e) {
       console.error(e);
-      setError("통계 정보를 불러오지 못했습니다.");
-      setStats(null);
+      setError("통계 조회 중 오류가 발생했습니다.");
     } finally {
       setLoading(false);
     }
@@ -31,129 +31,68 @@ const AdminDashboardPage = () => {
   }, []);
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
+    <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#020617" }}>
       <AdminSidebar />
-      <div style={{ flex: 1, padding: "24px" }}>
-        <header
+      <main style={{ flex: 1, padding: "24px 28px", backgroundColor: "#020617" }}>
+        <h1
           style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "16px",
+            fontSize: "24px",
+            fontWeight: "700",
+            color: "#f9fafb",
+            marginBottom: "4px",
           }}
         >
-          <div>
-            <h1 style={{ fontSize: "20px", margin: 0 }}>대시보드</h1>
-            <div style={{ fontSize: "12px", color: "#aaa", marginTop: "4px" }}>
-              관리자 통계 현황
-            </div>
-          </div>
-          <div style={{ fontSize: "13px", display: "flex", alignItems: "center", gap: "8px" }}>
-            <span>{admin?.name}님</span>
-            <button
-              type="button"
-              onClick={logout}
-              style={{
-                padding: "6px 10px",
-                borderRadius: "6px",
-                border: "1px solid #444",
-                backgroundColor: "#111",
-                fontSize: "12px",
-              }}
-            >
-              로그아웃
-            </button>
-          </div>
-        </header>
+          대시보드
+        </h1>
+        <p style={{ fontSize: "13px", color: "#9ca3af", marginBottom: "16px" }}>
+          코스메이트 서비스의 전체 현황을 한눈에 확인합니다.
+        </p>
 
-        <section style={{ marginBottom: "16px" }}>
-          <button
-            type="button"
-            onClick={loadStats}
-            style={{
-              padding: "6px 10px",
-              borderRadius: "6px",
-              border: "1px solid #444",
-              fontSize: "12px",
-              backgroundColor: "#111",
-            }}
-          >
-            새로고침
-          </button>
-        </section>
-
-        {loading && <div style={{ fontSize: "13px" }}>불러오는 중...</div>}
+        {loading && (
+          <div style={{ color: "#e5e7eb", fontSize: "14px" }}>
+            통계를 불러오는 중입니다...
+          </div>
+        )}
         {error && (
-          <div style={{ fontSize: "13px", color: "#ff6b6b", marginBottom: "8px" }}>
+          <div style={{ color: "#fecaca", fontSize: "13px", marginBottom: "8px" }}>
             {error}
           </div>
         )}
 
-        <section
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: "12px",
-            marginTop: "8px",
-          }}
-        >
-          <div
+        {stats && (
+          <section
             style={{
-              flex: "0 0 220px",
-              borderRadius: "10px",
-              border: "1px solid #333",
-              padding: "12px",
-              backgroundColor: "#111",
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+              gap: "16px",
             }}
           >
-            <div style={{ fontSize: "13px", marginBottom: "4px" }}>오늘 가입한 회원 수</div>
-            <div style={{ fontSize: "22px", fontWeight: "700" }}>
-              {stats?.todayUsers ?? "-"}
-            </div>
-          </div>
-          <div
-            style={{
-              flex: "0 0 220px",
-              borderRadius: "10px",
-              border: "1px solid #333",
-              padding: "12px",
-              backgroundColor: "#111",
-            }}
-          >
-            <div style={{ fontSize: "13px", marginBottom: "4px" }}>오늘 등록된 리뷰 수</div>
-            <div style={{ fontSize: "22px", fontWeight: "700" }}>
-              {stats?.todayReviews ?? "-"}
-            </div>
-          </div>
-          <div
-            style={{
-              flex: "0 0 220px",
-              borderRadius: "10px",
-              border: "1px solid #333",
-              padding: "12px",
-              backgroundColor: "#111",
-            }}
-          >
-            <div style={{ fontSize: "13px", marginBottom: "4px" }}>전체 회원 수</div>
-            <div style={{ fontSize: "22px", fontWeight: "700" }}>
-              {stats?.totalUsers ?? "-"}
-            </div>
-          </div>
-          <div
-            style={{
-              flex: "0 0 220px",
-              borderRadius: "10px",
-              border: "1px solid #333",
-              padding: "12px",
-              backgroundColor: "#111",
-            }}
-          >
-            <div style={{ fontSize: "13px", marginBottom: "4px" }}>전체 리뷰 수</div>
-            <div style={{ fontSize: "22px", fontWeight: "700" }}>
-              {stats?.totalReviews ?? "-"}
-            </div>
-          </div>
-        </section>
+            <StatCard label="전체 회원 수" value={stats.totalUsers} />
+            <StatCard label="전체 리뷰 수" value={stats.totalReviews} />
+            <StatCard label="등록된 관광지 수" value={stats.totalSpots} />
+          </section>
+        )}
+      </main>
+    </div>
+  );
+};
+
+const StatCard = ({ label, value }) => {
+  return (
+    <div
+      style={{
+        backgroundColor: "#020617",
+        borderRadius: "14px",
+        padding: "16px 18px",
+        border: "1px solid rgba(148,163,184,0.35)",
+        boxShadow: "0 8px 24px rgba(15,23,42,0.65)",
+      }}
+    >
+      <div style={{ fontSize: "13px", color: "#9ca3af", marginBottom: "6px" }}>
+        {label}
+      </div>
+      <div style={{ fontSize: "22px", fontWeight: "700", color: "#f9fafb" }}>
+        {value ?? "-"}
       </div>
     </div>
   );

@@ -2,51 +2,29 @@
 import request from "./client.js";
 
 /**
- * 회원 목록 조회
+ * 전체 회원 목록 조회
+ * GET /api/admin/users
+ * Response: { result_code, users: [...] }
  */
-export async function fetchUsers(params = {}) {
-  const searchParams = new URLSearchParams();
-  if (params.keyword) searchParams.set("keyword", params.keyword);
-  if (params.page != null) searchParams.set("page", String(params.page));
-  if (params.size != null) searchParams.set("size", String(params.size));
-
-  const qs = searchParams.toString();
-  const path = `/admin/users${qs ? `?${qs}` : ""}`;
-
-  return request(path, {
+export async function fetchAdminUsers() {
+  return request("/api/admin/users", {
     method: "GET",
     auth: true,
   });
 }
 
 /**
- * 회원 상태(활성/비활성 등) 변경
+ * 회원 상태 변경 (정지/해제)
+ * PUT /api/admin/users/:userId/status
+ * Body: { isActive: 'Y' | 'N' }
  */
-export async function updateUserStatus(userId, status) {
-  return request(`/admin/users/${userId}/status`, {
-    method: "PATCH",
-    auth: true,
-    body: JSON.stringify({ status }),
-  });
-}
-
-/**
- * 회원 정보 수정
- */
-export async function updateUser(userId, payload) {
-  return request(`/admin/users/${userId}`, {
+export async function changeUserStatus(userId, isActive) {
+  return request(`/api/admin/users/${userId}/status`, {
     method: "PUT",
     auth: true,
-    body: JSON.stringify(payload),
-  });
-}
-
-/**
- * 회원 삭제
- */
-export async function deleteUser(userId) {
-  return request(`/admin/users/${userId}`, {
-    method: "DELETE",
-    auth: true,
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ isActive }),
   });
 }

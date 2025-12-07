@@ -27,8 +27,10 @@ export default function PlaceCard({ place, onPress }) {
 const styles = StyleSheet.create({
   card: {
     flexDirection: "row",
-    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     backgroundColor: COLORS.card,
+    borderRadius: 16,
     padding: 12,
     marginVertical: 6,
   },
