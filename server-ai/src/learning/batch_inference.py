@@ -17,7 +17,7 @@ MAX_LEN = 128
 BATCH_SIZE = 64  # 추론은 빠르니까 64로 설정 (메모리 터지면 32로 줄이세요)
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-DATA_FILE = "total_merged_data.csv"   # 38,000개 원본 데이터
+DATA_FILE = "total_merged_data.csv"   # 90,000개 원본 데이터
 MODEL_FILE = "course_mate_model.pt"   # 학습된 모델 파일
 TAGS_FILE = "tags.json"               # 태그 순서 파일
 
