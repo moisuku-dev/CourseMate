@@ -14,9 +14,9 @@ from sklearn.model_selection import train_test_split
 # ==========================================
 MODEL_NAME = "klue/bert-base" # ✅ 한국어 표준 모델
 MAX_LEN = 128
-BATCH_SIZE = 32
-EPOCHS = 1
-LEARNING_RATE = 2e-5
+BATCH_SIZE = 64
+EPOCHS = 3
+LEARNING_RATE = 3e-5
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 print(f"🚀 학습 장치: {DEVICE} (GPU가 없으면 CPU로 돌아가서 느릴 수 있어요!)")
