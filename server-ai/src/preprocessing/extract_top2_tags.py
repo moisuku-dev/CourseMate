@@ -1,12 +1,12 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 import pandas as pd
 import os
 
 # ==========================================
 # 설정
 # ==========================================
-INPUT_FILE = 'spot_tag_scores.csv'       # 원본 파일 (장소별 모든 태그 점수)
-OUTPUT_FILE = 'top2_tags_summary.csv'    # 결과 파일 (상위 2개 태그)
+INPUT_FILE = 'spot_tag_scores.csv'       # 원본 파일
+OUTPUT_FILE = 'top2_tags_summary.csv'    # 결과 파일
 
 def extract_top2():
     # 1. 파일 확인
@@ -15,8 +15,23 @@ def extract_top2():
         return
 
     print(f"📂 '{INPUT_FILE}' 로딩 중...")
-    df = pd.read_csv(INPUT_FILE, encoding="cp949")
-
+    
+    # -------------------------------------------------------
+    # 🔥 [수정됨] 인코딩 자동 감지 로직 (가장 안전한 방법)
+    # -------------------------------------------------------
+    try:
+        # 1순위: 코랩/파이썬 표준 (utf-8-sig)
+        df = pd.read_csv(INPUT_FILE, encoding='utf-8-sig')
+        print("✅ UTF-8-SIG 방식으로 읽기 성공!")
+    except:
+        try:
+            # 2순위: 윈도우/엑셀 표준 (cp949)
+            df = pd.read_csv(INPUT_FILE, encoding='cp949')
+            print("✅ CP949 방식으로 읽기 성공!")
+        except Exception as e:
+            # 3순위: 그래도 안 되면 에러 출력
+            print(f"❌ 파일 읽기 완전 실패: {e}")
+            return
 
     # 2. 상위 2개 태그 추출 로직
     top2_data = []
